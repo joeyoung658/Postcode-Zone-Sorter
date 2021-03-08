@@ -14,7 +14,9 @@ saturday = ["CM2","CM4","CM15","CM11","CM12","CM13","CM14","CM15","EC3M","EC3N",
 charge = ["NW1","SW10","E3","E4","E5","E6","E7","E8","E9","E10","E11","E12","E13","E14","E15","E16","E17","E18","SE3","SE4","SE5","SE13","SE14","SE15","SE18","N4","N5","N6","N7","N8","E4","SW3","SW4","SW5","SW6","SW7","SW9","SW10","SW11","SW12","SW13","SW14","SW15","SW16","SW17","SW18","SW19","W2","NW2","NW3","NW5","TW1","RM15","N15","N16","N19","NW5","NW6","W4","W6","W8","W9","W10","W11","W12","SE7","SE8","SE21","SE22","SE24"]
 chargeAmt = 7.50
 
-
+"""
+Seperates the postcodes into what days they can be delivered on
+"""
 def postCodeSorter(day, zones, array):
     for postcode in array:
         found = False
@@ -29,6 +31,9 @@ def postCodeSorter(day, zones, array):
                 zones.append([postcode, [day], 0])
     return zones        
 
+"""
+Merges the difference postcodes into zones where the days of delivery are the same
+"""
 def zoneCreater(zones):
     newZones = []
     counter = 0
@@ -43,30 +48,71 @@ def zoneCreater(zones):
             newZones.append([counter, [zones[i][0]], zones[i][1], zones[i][2]])
     return newZones
 
-def zone_delivery_days():
+"""
+The website requires the days which should not be delivered, so the days in the array need to be switched
+"""
+def zone_delivery_days(zones):
     zone_delivery_days = [0,1,2,3,4,5,6]
-    return    
-        
+    for i in range (len(zones)):
+        oldDeliveryDays = zones[i][2]
+        zones[i][2] = []
+        for z in range(len(zone_delivery_days)):
+            if  zone_delivery_days[z] not in oldDeliveryDays:
+                zones[i][2].append(zone_delivery_days[z])
+
+    return(zones)
+
+"""
+Writes data to csv for import to database
+"""
+def csv_writer(zones, filename):
+    with open(filename, mode='w') as postcode_file:
+        postcodes = csv.writer(postcode_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        for k in range(len(zones)):
+            postcodes.writerow(zones[k])        
+"""
+Formats data for zone database
+"""        
 def suttonsilver_bobtailmanagment_zones(zones):
     #Days that require a delivery should not be included in the list so keys need to be swaped.
-    
-    tableHeaders = ["zones_id", "zone_name", "price_default", "zone_times", "status", "zone_delivery_days"]
-    
-    return
+    table = [["zones_id", "zone_name", "price_default", "zone_times", "status", "zone_delivery_days"]]
+    zones = zone_delivery_days(zones)
 
-def suttonsilver_bobtailmanagment_postcodes():
-    tableHeaders = ["postcodes_id", "zone_id", "postcode_range_start", "postcode_range_end", "postcode_name", "status"]
-    return 
+    for i in range(len(zones)):
+        days = (str(zones[i][2]).replace("[", "").replace("]", "").replace(" ", ""))
+        table.append([zones[i][0], "Zone_" + str(zones[i][0]), zones[i][3], [], 1, days])
+    
+    csv_writer(table, 'suttonsilver_bobtailmanagment_zones.csv')
+    
+"""
+Formats data for postcode database
+"""
+def suttonsilver_bobtailmanagment_postcodes(zones):
+    table = [["postcodes_id", "zone_id", "postcode_range_start", "postcode_range_end", "postcode_name", "status"]]
+     
+    counter = 0
+    for i in range(len(zones)):
+        for z in range(len(zones[i][1])):
+            counter += 1
+            table.append([counter, zones[i][0], zones[i][1][z], zones[i][1][z], zones[i][1][z], 1])
+
+    csv_writer(table, 'suttonsilver_bobtailmanagment_postcodes.csv')
+            
+          
 
 def __main__():
     zones = []
-    zones = postCodeSorter("1", zones, monday)
-    zones = postCodeSorter("2", zones, tuesday)
-    zones = postCodeSorter("3", zones, wednesday)
-    zones = postCodeSorter("4", zones, thursday)
-    zones = postCodeSorter("5", zones, friday)
-    zones = postCodeSorter("6", zones, saturday)
+    zones = postCodeSorter(1, zones, monday)
+    zones = postCodeSorter(2, zones, tuesday)
+    zones = postCodeSorter(3, zones, wednesday)
+    zones = postCodeSorter(4, zones, thursday)
+    zones = postCodeSorter(5, zones, friday)
+    zones = postCodeSorter(6, zones, saturday)
 
+    zones = zoneCreater(zones)
+
+    suttonsilver_bobtailmanagment_zones(zones)
+    suttonsilver_bobtailmanagment_postcodes(zones)
     
 
 __main__()
